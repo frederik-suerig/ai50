@@ -1,6 +1,7 @@
 import csv
 import itertools
 import sys
+from pomegranate import *
 
 PROBS = {
 
@@ -60,10 +61,11 @@ def main():
         for person in people
     }
 
+    # print(people)
+
     # Loop over all sets of people who might have the trait
     names = set(people)
     for have_trait in powerset(names):
-
         # Check if current set of people violates known information
         fails_evidence = any(
             (people[person]["trait"] is not None and
@@ -73,13 +75,15 @@ def main():
         if fails_evidence:
             continue
 
+        # print(have_trait)
+
         # Loop over all sets of people who might have the gene
         for one_gene in powerset(names):
             for two_genes in powerset(names - one_gene):
 
                 # Update probabilities with new joint probability
                 p = joint_probability(people, one_gene, two_genes, have_trait)
-                update(probabilities, one_gene, two_genes, have_trait, p)
+                # update(probabilities, one_gene, two_genes, have_trait, p)
 
     # Ensure probabilities sum to 1
     normalize(probabilities)
@@ -127,6 +131,23 @@ def powerset(s):
         )
     ]
 
+def num_genes_of_person(person, one_gene, two_genes):
+    if person in one_gene:
+        return 1
+    elif person in two_genes:
+        return 2
+    else:
+        return 0
+
+def calc_probability(person, num_genes, num_genes_mother, num_genes_mother):
+    if num_genes == 0:
+        
+    elif num_genes == 1:
+
+    else:
+
+
+    
 
 def joint_probability(people, one_gene, two_genes, have_trait):
     """
@@ -139,7 +160,24 @@ def joint_probability(people, one_gene, two_genes, have_trait):
         * everyone in set `have_trait` has the trait, and
         * everyone not in set` have_trait` does not have the trait.
     """
-    raise NotImplementedError
+
+    probability = 1
+
+    for person in people:
+
+        num_genes = num_genes_of_person(person, one_gene, two_genes)
+            
+        has_trait = person in have_trait
+
+        if people[person]['mother'] is None and people[person]['father'] is None:
+            probability *= PROBS['gene'][num_genes] * PROBS['trait'][num_genes][has_trait]
+        else:
+            num_genes_mother = num_genes_of_person(people[person]['mother'], one_gene, two_genes)
+            num_genes_father = num_genes_of_person(people[person]['father'], one_gene, two_genes)
+
+            probability *= calc_probability(person, num_genes, num_genes_mother, num_genes_father)
+            
+
 
 
 def update(probabilities, one_gene, two_genes, have_trait, p):
@@ -157,7 +195,17 @@ def normalize(probabilities):
     Update `probabilities` such that each probability distribution
     is normalized (i.e., sums to 1, with relative proportions the same).
     """
-    raise NotImplementedError
+    for person in probabilities:
+        trait_sum = sum(probabilities[person]["trait"].values())
+        gene_sum = sum(probabilities[person]["gene"].values())
+
+        # Normalise gene distribution
+        for gene in probabilities[person]["gene"]:
+            probabilities[person]["gene"][gene] /= gene_sum
+
+        # Normalise trait distribution
+        for trait in probabilities[person]["trait"]:
+            probabilities[person]["trait"][trait] /= trait_sum
 
 
 if __name__ == "__main__":
