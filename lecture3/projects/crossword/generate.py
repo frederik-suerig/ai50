@@ -122,6 +122,7 @@ class CrosswordCreator():
             arc_consistent = False
             for word_y in self.domains[y]:
                 if word_x[i] == word_y[j]:
+                    # print("{} and {} have the same characters {} & {}".format(word_x, word_y, word_x[i], word_y[j]))
                     arc_consistent = True
                     break
 
@@ -188,15 +189,22 @@ class CrosswordCreator():
         for var in assignment:
             if assignment[var] in used_words:
                 consistent = False
+                break
 
             used_words.add(assignment[var])
 
             if len(assignment[var]) != var.length:
                 consistent = False
+                break
 
             for neighbor in self.crossword.neighbors(var):
-                if assignment[neighbor] == assignment[var]:
-                    consistent = False
+                if neighbor in assignment:
+                    i, j = self.crossword.overlaps[var, neighbor]
+                    if assignment[var][i] != assignment[neighbor][j]:
+                        consistent = False
+                        break
+                    # else:
+                    #     print("{} and {} have the same characters {} & {}".format(assignment[var], assignment[neighbor], assignment[var][i], assignment[neighbor][j]))
 
         return consistent
 
@@ -214,20 +222,20 @@ class CrosswordCreator():
         for word in self.domains[var]:
             possible_words[word] = 0
 
-
-
         # Loop through each neighbor
+        
         for neighbor in self.crossword.neighbors(var):
-            # continue when  that neighbor already has been assigned 
+            # continue when  that neighbor already has been assigned
             if neighbor in assignment:
                 continue
-                    
-            for word_x in possible_words:
-                for word_y in self.domains[y]:
 
+            for word_x in possible_words:
+                for word_y in self.domains[neighbor]:
+
+                    i, j = self.crossword.overlaps[var, neighbor]
                     # When chars are not equal the word would be ruled out
                     if word_x[i] != word_y[j]:
-                        possible_words += 1
+                        possible_words[word_x] += 1
 
         # Order dict by value
         """
@@ -235,10 +243,9 @@ class CrosswordCreator():
         are compared for sorting. The get() method on dictionary objects returns 
         the value of for a dictionary's key.
         """
-        sorted_dict = sorted(possible_words, key=possible_words.get())
+        sorted_dict = sorted(possible_words, key=possible_words.get)
 
         return sorted_dict
-                        
 
     def select_unassigned_variable(self, assignment):
         """
@@ -248,41 +255,55 @@ class CrosswordCreator():
         degree. If there is a tie, any of the tied variables are acceptable
         return values.
         """
-
-        possible_vars = dict()
-        sorted_vars = []
+        best_choice = None
 
         for variable in self.crossword.variables:
             if variable in assignment:
                 continue
-            
-            possible_vars[variable] = len(self.domains[variable]);
 
-            if not sorted_vars:
-                sorted_vars.append(possible_vars[0])
+            if not best_choice:
+                best_choice = variable
                 continue
 
-            for i, s_var in enumerate(sorted_vars):
-                if possible_vars[variable] == possible_vars[s_var]:
-                    degree_var = len(self.crossword.neighbors(variable))
-                    degree_svar = len(self.crossword.neighbors(s_var))
-                    
-                    if degree_var == degree_svar:
-                        sorted_vars.insert(i, variable)
-                    
-                    if degree_var > degree_svar:
-                        sorted_vars.insert(i, variable)
+            # If variable has fewer values in it domain as the current best choice update it
+            if len(self.domains[variable]) < len(self.domains[best_choice]):
+                best_choice = variable
+                continue
 
-                    if degree_var < degree_svar:
-                        sorted_vars.insert(i+1, variable)
+            # If the amount of values is the same check the degree
+            if len(self.domains[variable]) == len(self.domains[best_choice]):
 
-                if possible_vars[variable] > possible_vars[s_var]:
-                    continue
+                # If the degree of variable is bigger than from best choice, update it
+                if len(self.crossword.neighbors(variable)) > len(self.crossword.neighbors(best_choice)):
+                    best_choice = variable
 
-                sorted_vars.insert(i, variable)
-                break
-        
-        return sorted_vars[0]
+                # When the degrees are equal leave best_choice unchanged
+
+        return best_choice
+
+    def maintain_arc_consitency(self, assignment, var):
+        inferences = dict()
+
+        for neighbor in self.crossword.neighbors(var):
+            if neighbor in assignment:
+                continue
+            
+            i, j = self.crossword.overlaps[var, neighbor]
+
+            for word in self.domains[neighbor].copy():
+                if word[j] != assignment[var][i]:   
+                    self.domains[neighbor].remove(word)
+            
+            queue = []
+            for neighbor2 in self.crossword.neighbors(neighbor):
+                queue.append((neighbor, neighbor2))
+            
+            self.ac3(queue)
+
+        if len(inferences) != 0:
+            return inferences
+            
+        return None
 
 
     def backtrack(self, assignment):
@@ -294,7 +315,35 @@ class CrosswordCreator():
 
         If no assignment is possible, return None.
         """
-        pass
+
+        # Code according to the sudo code from the slides
+
+        if self.assignment_complete(assignment):
+            return assignment
+
+        var = self.select_unassigned_variable(assignment)
+
+        sorted_domains = self.order_domain_values(var, assignment)
+
+        for value in sorted_domains:
+            assignment[var] = value
+
+            if self.consistent(assignment):
+                inferences = self.maintain_arc_consitency(assignment, var)
+                
+                if inferences is not None:
+                    for inference in inferences:
+                        assignment[inference] = infereces[inference]
+
+                result = self.backtrack(assignment)
+                if result is not None:
+                    return result
+                else: # Remove variables again
+                    assignment.pop(var)
+                    for inference in inferences:
+                        assignment.pop(inference)
+
+        return None
 
 
 def main():
