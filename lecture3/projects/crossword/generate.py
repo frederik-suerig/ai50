@@ -122,7 +122,6 @@ class CrosswordCreator():
             arc_consistent = False
             for word_y in self.domains[y]:
                 if word_x[i] == word_y[j]:
-                    # print("{} and {} have the same characters {} & {}".format(word_x, word_y, word_x[i], word_y[j]))
                     arc_consistent = True
                     break
 
@@ -141,6 +140,7 @@ class CrosswordCreator():
         Return True if arc consistency is enforced and no domains are empty;
         return False if one or more domains end up empty.
         """
+        # Create initial queue 
         if arcs is None:
             arcs = list()
             for variable in self.crossword.variables:
@@ -169,13 +169,11 @@ class CrosswordCreator():
         Return True if `assignment` is complete (i.e., assigns a value to each
         crossword variable); return False otherwise.
         """
-        complete = True
-
         for variable in self.crossword.variables:
             if variable not in assignment:
-                complete = False
+                return False
 
-        return complete
+        return True
 
     def consistent(self, assignment):
         """
@@ -187,24 +185,25 @@ class CrosswordCreator():
         used_words = set()
 
         for var in assignment:
+            # Every word can only be used once
             if assignment[var] in used_words:
                 consistent = False
                 break
 
             used_words.add(assignment[var])
 
+            # Check unary constraints
             if len(assignment[var]) != var.length:
                 consistent = False
                 break
 
+            #Check binary constraints
             for neighbor in self.crossword.neighbors(var):
                 if neighbor in assignment:
                     i, j = self.crossword.overlaps[var, neighbor]
                     if assignment[var][i] != assignment[neighbor][j]:
                         consistent = False
                         break
-                    # else:
-                    #     print("{} and {} have the same characters {} & {}".format(assignment[var], assignment[neighbor], assignment[var][i], assignment[neighbor][j]))
 
         return consistent
 
@@ -243,9 +242,9 @@ class CrosswordCreator():
         are compared for sorting. The get() method on dictionary objects returns 
         the value of for a dictionary's key.
         """
-        sorted_dict = sorted(possible_words, key=possible_words.get)
+        sorted_domains = sorted(possible_words, key=possible_words.get)
 
-        return sorted_dict
+        return sorted_domains
 
     def select_unassigned_variable(self, assignment):
         """
@@ -294,6 +293,7 @@ class CrosswordCreator():
                 if word[j] != assignment[var][i]:   
                     self.domains[neighbor].remove(word)
             
+            # Add neighbors from the neighbor to a queue to run arc3 on that
             queue = []
             for neighbor2 in self.crossword.neighbors(neighbor):
                 queue.append((neighbor, neighbor2))
@@ -323,9 +323,7 @@ class CrosswordCreator():
 
         var = self.select_unassigned_variable(assignment)
 
-        sorted_domains = self.order_domain_values(var, assignment)
-
-        for value in sorted_domains:
+        for value in self.order_domain_values(var, assignment):
             assignment[var] = value
 
             if self.consistent(assignment):
