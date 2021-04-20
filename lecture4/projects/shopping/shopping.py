@@ -151,12 +151,6 @@ def evaluate(labels, predictions):
         elif label == 0 and label == prediction:
             true_negative += 1
 
-    print("{} predicted, {} real".format(np.sum(predictions == 1), labels.count(1)))
-    print("{} true positives".format(true_positive))
-    print("----------------------")
-    print("{} predicted, {} real".format(np.sum(predictions == 0), labels.count(0)))
-    print("{} true negatives".format(true_negative))
-
     sensitivity = true_positive / labels.count(1)
     specificity = true_negative / labels.count(0)
 
