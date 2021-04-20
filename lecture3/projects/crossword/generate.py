@@ -118,6 +118,7 @@ class CrosswordCreator():
 
         revised = False
 
+        # Check if there is at least one possible combination
         for word_x in self.domains[x].copy():
             arc_consistent = False
             for word_y in self.domains[y]:
@@ -125,7 +126,7 @@ class CrosswordCreator():
                     arc_consistent = True
                     break
 
-            if (not(arc_consistent)):
+            if not arc_consistent:
                 self.domains[x].remove(word_x)
                 revised = True
 
@@ -140,7 +141,7 @@ class CrosswordCreator():
         Return True if arc consistency is enforced and no domains are empty;
         return False if one or more domains end up empty.
         """
-        # Create initial queue 
+        # Create initial queue
         if arcs is None:
             arcs = list()
             for variable in self.crossword.variables:
@@ -197,7 +198,7 @@ class CrosswordCreator():
                 consistent = False
                 break
 
-            #Check binary constraints
+            # Check binary constraints
             for neighbor in self.crossword.neighbors(var):
                 if neighbor in assignment:
                     i, j = self.crossword.overlaps[var, neighbor]
@@ -222,7 +223,7 @@ class CrosswordCreator():
             possible_words[word] = 0
 
         # Loop through each neighbor
-        
+
         for neighbor in self.crossword.neighbors(var):
             # continue when  that neighbor already has been assigned
             if neighbor in assignment:
@@ -282,29 +283,35 @@ class CrosswordCreator():
 
     def maintain_arc_consitency(self, assignment, var):
         inferences = dict()
+        # queue = []
 
         for neighbor in self.crossword.neighbors(var):
             if neighbor in assignment:
                 continue
-            
+
+            # First Version which only maintained arc consitency for the first neighbors
+            # queue.append((var, neighbor))
+
             i, j = self.crossword.overlaps[var, neighbor]
 
+            # Check all words in the domain of the direct neighbor
             for word in self.domains[neighbor].copy():
-                if word[j] != assignment[var][i]:   
+                if word[j] != assignment[var][i]:
                     self.domains[neighbor].remove(word)
-            
+
             # Add neighbors from the neighbor to a queue to run arc3 on that
             queue = []
             for neighbor2 in self.crossword.neighbors(neighbor):
                 queue.append((neighbor, neighbor2))
-            
+
             self.ac3(queue)
+
+        # self.ac3(queue)
 
         if len(inferences) != 0:
             return inferences
-            
-        return None
 
+        return None
 
     def backtrack(self, assignment):
         """
@@ -328,18 +335,19 @@ class CrosswordCreator():
 
             if self.consistent(assignment):
                 inferences = self.maintain_arc_consitency(assignment, var)
-                
+
                 if inferences is not None:
                     for inference in inferences:
                         assignment[inference] = infereces[inference]
 
                 result = self.backtrack(assignment)
-                if result is not None:
+                if result is not None:  # If all assignments work out
                     return result
-                else: # Remove variables again
+                else:  # Remove variables again
                     assignment.pop(var)
-                    for inference in inferences:
-                        assignment.pop(inference)
+                    if inferences is not None:
+                        for inference in inferences:
+                            assignment.pop(inference)
 
         return None
 
