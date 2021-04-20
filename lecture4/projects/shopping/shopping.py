@@ -1,5 +1,6 @@
 import csv
 import sys
+import numpy as np
 
 from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsClassifier
@@ -59,7 +60,60 @@ def load_data(filename):
     labels should be the corresponding list of labels, where each label
     is 1 if Revenue is true, and 0 otherwise.
     """
-    raise NotImplementedError
+    with open(filename) as f:
+        reader = csv.reader(f)
+        next(reader)
+
+        strInt = {
+            "Jan": 0,
+            "Feb": 1,
+            "Mar": 2,
+            "Apr": 3,
+            "May": 4,
+            "June": 5,
+            "Jul": 6,
+            "Aug": 7,
+            "Sep": 8,
+            "Oct": 9,
+            "Nov": 10,
+            "Dec": 11,
+            "Returning_Visitor": 1,
+            "New_Visitor": 0,
+            "Other": 0
+        }
+
+        evidence = []
+        labels = []
+
+        for index, row in enumerate(reader):
+            # if index == 2:
+            #    break
+
+            evidence.append([])
+            labels.append(None)
+
+            for cell in row[:17]:
+                try:
+                    val = int(cell)
+                except ValueError:
+                    try:
+                        val = float(cell)
+                    except ValueError:
+                        if cell == "FALSE":
+                            val = 0
+                        elif cell == "TRUE":
+                            val = 1
+                        else:
+                            val = strInt[cell]
+
+                evidence[index].append(val)
+
+            if row[17] == "FALSE":
+                labels[index] = 0
+            elif row[17] == "TRUE":
+                labels[index] = 1
+
+        return evidence, labels
 
 
 def train_model(evidence, labels):
@@ -67,7 +121,10 @@ def train_model(evidence, labels):
     Given a list of evidence lists and a list of labels, return a
     fitted k-nearest neighbor model (k=1) trained on the data.
     """
-    raise NotImplementedError
+    model = KNeighborsClassifier(n_neighbors=1)
+    model.fit(evidence, labels)
+
+    return model
 
 
 def evaluate(labels, predictions):
@@ -85,7 +142,25 @@ def evaluate(labels, predictions):
     representing the "true negative rate": the proportion of
     actual negative labels that were accurately identified.
     """
-    raise NotImplementedError
+    true_positive = 0
+    true_negative = 0
+
+    for label, prediction in zip(labels, predictions):
+        if label == 1 and label == prediction:
+            true_positive += 1
+        elif label == 0 and label == prediction:
+            true_negative += 1
+
+    print("{} predicted, {} real".format(np.sum(predictions == 1), labels.count(1)))
+    print("{} true positives".format(true_positive))
+    print("----------------------")
+    print("{} predicted, {} real".format(np.sum(predictions == 0), labels.count(0)))
+    print("{} true negatives".format(true_negative))
+
+    sensitivity = true_positive / labels.count(1)
+    specificity = true_negative / labels.count(0)
+
+    return (sensitivity, specificity)
 
 
 if __name__ == "__main__":
