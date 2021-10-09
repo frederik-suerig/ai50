@@ -63,7 +63,7 @@ def result(board, action):
     """
     Returns the board that results from making move (i, j) on the board.
     """
-    i, j = actions
+    i, j = action
     new_board = deepcopy(board)
 
     if new_board[i][j] is not EMPTY:
@@ -166,7 +166,7 @@ def minimax(board):
         v = -math.inf
 
         for action in actions(board):
-            new_v = minimax_value(result(board, action), O)
+            new_v = minimax_value(result(board, action), O, alpha, beta)
 
             if new_v > v:
                 v = new_v
@@ -175,7 +175,7 @@ def minimax(board):
         v = math.inf
 
         for action in actions(board):
-            new_v = minimax_value(result(board, action), X)
+            new_v = minimax_value(result(board, action), X, alpha, beta)
 
             if new_v < v:
                 v = new_v
@@ -183,9 +183,3 @@ def minimax(board):
 
     return optimail_move
 
-
-# if __name__ == "__main__":
-#     array = initial_state()
-#     print(array)
-#     array1 = result(array, (0, 0))
-#     print(array)
